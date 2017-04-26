@@ -107,7 +107,7 @@ class World:
         self.screen.blit(self.bg_screen, (0,0))
         for p in self.shapes:
             p.draw(self.screen)
-        pygame.display.flip()
+        #pygame.display.flip()
 
     def display_noflip(self):
         self.screen.blit(self.bg_screen, (0,0))
@@ -278,6 +278,10 @@ def random_color(minimum, maximum):
 def main():
     pygame.init()
     world = World(1500, 800, WHITE)
+    lineScreen = pygame.Surface((3, 800))
+    lineScreen.fill(BLUE)
+    world.screen.blit(lineScreen,(300, 0))
+    
     world.display()
     
     moving = []
@@ -286,6 +290,7 @@ def main():
     done = False
     density = 1 # mass / area
     timesteps = 0
+    inRange = False;
 
     shape = Rectangle((1200,700), (0,0), 0, 0, BLUE, 1, 50, 200)
     world.add(shape)
@@ -311,12 +316,23 @@ def main():
                 break
             if event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1: # left mouse button
-                        launch_pos = event.pos
-                        shape = Rectangle(launch_pos, (0,0), 0, 0, BLUE, 1, 80, 80)
-                        world.add(shape)
-                        shape.add_impulse(Vec2d(0, 1000), launch_pos + Vec2d(50, 50))
-                        shape.vel = Vec2d(10, -3)
-                        moving.append(shape)
+                        if event.pos[0] <= 300:
+                            startPos = event.pos
+                            inRange = True
+                        else:
+                            inRange = False
+            if event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1: # left mouse button
+                        if inRange == True and event.pos[0] <= 300:
+                            endPos = event.pos
+                            launchVec = Vec2d(startPos) - Vec2d(endPos)
+                            shape = Rectangle(endPos, (0,0), 0, 0, BLUE, 1, 80, 80)
+                            world.add(shape)
+                            shape.add_impulse(Vec2d(0, 1000), endPos + Vec2d(50, 50))
+                            if launchVec.length > 300:
+                                launchVec = launchVec.normalized() * 300
+                            shape.vel = launchVec * 0.05
+                            moving.append(shape)
 
         # Velocity Verlet method
         n = 1
@@ -333,6 +349,8 @@ def main():
                 collide_count += 1
         #print(shape.pos, shape.angle)
         world.display()
+        world.screen.blit(lineScreen,(300, 0))
+        pygame.display.flip()
         
         clock.tick(30) # wait so that this only updates 60 fps maximum
         
