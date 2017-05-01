@@ -204,6 +204,7 @@ def handle_collisions(shapes, world):
         p = shapes[i]
         p.update_points()
         p.update_axes()
+        pShapeRemoved = False
         for q in shapes:
             if p != q:
                 #pointNull = Vec2d(0,0)
@@ -221,6 +222,11 @@ def handle_collisions(shapes, world):
                     w = prxn * p.angvel - qrxn * q.angvel
                     J = (v.dot(n) + w) * n
                     J = -(1 + e) * J / ((p.massinv) + (q.massinv) + (prxn * prxn) / pI + (qrxn * qrxn) / qI)
+                    impulse = Vec2d(J)
+                    if p.color == GREEN and pShapeRemoved == False and impulse.length > 5000:
+                        pShapeRemoved = True
+                        p.color = RED
+                        world.remove(p)
                     p.pos += sepVec * p.massinv * mu
                     q.pos -= sepVec * q.massinv * mu
                     p.add_impulse(J, point)
@@ -242,6 +248,11 @@ def handle_collisions(shapes, world):
                     I = p.moment
                     J = (-(1 + wall.e) * (v.dot(n) + (w * (rxn))) * n) / (p.massinv + (rxn * rxn) / I)
             if max_d > 0:
+                impulse = Vec2d(J)
+                if p.color == GREEN and pShapeRemoved == False and impulse.length > 5000:
+                    pShapeRemoved = True
+                    p.color = RED
+                    world.remove(p)
                 p.pos += wall.normal * max_d
                 p.add_impulse(J, point)
                 p.update_points()
@@ -251,6 +262,7 @@ def handle_collisions(shapes, world):
     for p in shapes:
         p.update_points()
         p.update_axes()
+        
                 
             
     # update any shapes that have been moved
@@ -260,6 +272,19 @@ class Rectangle(Shape):
     def __init__(self, pos, vel, angle, angvel, color, density, length, height):
         self.unscaled_points = [Vec2d(0.5, 0.5), Vec2d(-0.5, 0.5), 
                                 Vec2d(-0.5, -0.5), Vec2d(0.5, -0.5)]
+        points = []
+        for p in self.unscaled_points:
+            points.append(Vec2d(p.x*length, p.y*height))
+        mass = density*length*height
+        moment = (mass/12)*(length*length + height*height)
+        super().__init__(pos, vel, angle, angvel, color, mass, moment, points)
+        
+class Octagon(Shape):
+    def __init__(self, pos, vel, angle, angvel, color, density, length, height):
+        self.unscaled_points = [Vec2d(0.2, 0.5), Vec2d(-0.2, 0.5), 
+                                Vec2d(-0.5, 0.2), Vec2d(-0.5, -0.2),
+                                Vec2d(-0.2, -0.5), Vec2d(0.2, -0.5), 
+                                Vec2d(0.5, -0.2), Vec2d(0.5, 0.2)]
         points = []
         for p in self.unscaled_points:
             points.append(Vec2d(p.x*length, p.y*height))
@@ -288,24 +313,54 @@ def main():
 
     clock = pygame.time.Clock()
     done = False
-    density = 1 # mass / area
-    timesteps = 0
+    #density = 1 # mass / area
+    #timesteps = 0
     inRange = False;
 
-    shape = Rectangle((1200,700), (0,0), 0, 0, BLUE, 1, 50, 200)
+    shape = Rectangle((975,700), (0,0), 0, 0, BLUE, 1, 50, 200)
     world.add(shape)
     shape.add_impulse(Vec2d(0,0), Vec2d(0,0))
     moving.append(shape)
     
-    shape2 = Rectangle((1300,700), (0,0), 0, 0, BLUE, 1, 50, 200)
+    shape2 = Rectangle((1125,700), (0,0), 0, 0, BLUE, 1, 50, 200)
     world.add(shape2)
     shape2.add_impulse(Vec2d(0,0), Vec2d(0,0))
     moving.append(shape2)
     
-    shape3 = Rectangle((1250,575), (0,0), 0, 0, BLUE, 1, 200, 50)
+    shape3 = Rectangle((1050,575), (0,0), 0, 0, BLUE, 1, 200, 50)
     world.add(shape3)
     shape3.add_impulse(Vec2d(0,0), Vec2d(0,0))
     moving.append(shape3)
+    
+    shape4 = Rectangle((1225,700), (0,0), 0, 0, BLUE, 1, 50, 200)
+    world.add(shape4)
+    shape4.add_impulse(Vec2d(0,0), Vec2d(0,0))
+    moving.append(shape4)
+    
+    shape5 = Rectangle((1375,700), (0,0), 0, 0, BLUE, 1, 50, 200)
+    world.add(shape5)
+    shape5.add_impulse(Vec2d(0,0), Vec2d(0,0))
+    moving.append(shape5)
+    
+    shape6 = Rectangle((1300,575), (0,0), 0, 0, BLUE, 1, 200, 50)
+    world.add(shape6)
+    shape6.add_impulse(Vec2d(0,0), Vec2d(0,0))
+    moving.append(shape6)
+    
+    enemy1 = Octagon((1300,775), (0,0), 0, 0, GREEN, 1, 60, 60)
+    world.add(enemy1)
+    enemy1.add_impulse(Vec2d(0,0), Vec2d(0,0))
+    moving.append(enemy1)
+    
+    enemy2 = Octagon((1050,775), (0,0), 0, 0, GREEN, 1, 60, 60)
+    world.add(enemy2)
+    enemy2.add_impulse(Vec2d(0,0), Vec2d(0,0))
+    moving.append(enemy2)
+    
+    #enemy3 = Octagon((800,775), (0,0), 0, 0, GREEN, 1, 60, 60)
+    #world.add(enemy3)
+    #enemy3.add_impulse(Vec2d(0,0), Vec2d(0,0))
+    #moving.append(enemy3)
     
     while not done:
         print(shape.pos, shape.vel, shape.angle, shape.angvel)
@@ -326,7 +381,7 @@ def main():
                         if inRange == True and event.pos[0] <= 300:
                             endPos = event.pos
                             launchVec = Vec2d(startPos) - Vec2d(endPos)
-                            shape = Rectangle(endPos, (0,0), 0, 0, BLUE, 1, 80, 80)
+                            shape = Octagon(endPos, (0,0), 0, 0, RED, 1, 80, 80)
                             world.add(shape)
                             shape.add_impulse(Vec2d(0, 1000), endPos + Vec2d(50, 50))
                             if launchVec.length > 300:
@@ -352,7 +407,7 @@ def main():
         world.screen.blit(lineScreen,(300, 0))
         pygame.display.flip()
         
-        clock.tick(30) # wait so that this only updates 60 fps maximum
+        clock.tick(60) # wait so that this only updates 60 fps maximum
         
     pygame.quit() # quit nicely, so the program window doesn't hang
 
