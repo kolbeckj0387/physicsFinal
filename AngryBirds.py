@@ -367,6 +367,7 @@ def main():
     world = World(1500, 800, WHITE)
     global enemiesDead
     enemiesDead = 0
+    level = 1
     lineScreen = pygame.Surface((3, 800))
     lineScreen.fill(BLUE)
     world.screen.blit(lineScreen,(300, 0))
@@ -413,11 +414,12 @@ def main():
                             moving.append(shape)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
-                    world = World(1500, 800, WHITE)
-                    moving = []
-                    global enemiesDead
-                    enemiesDead = 0
-                    create_level1(moving, world)
+                    if level == 1:
+                        world = World(1500, 800, WHITE)
+                        moving = []
+                        global enemiesDead
+                        enemiesDead = 0
+                        create_level1(moving, world)
 
         # Velocity Verlet method
         n = 1
@@ -435,7 +437,7 @@ def main():
         #print(shape.pos, shape.angle)
         world.display()
         world.screen.blit(lineScreen,(300, 0))
-        if enemiesDead == 2:
+        if enemiesDead == 2 and level == 1:
             world.screen.blit(win_text,(685,375))
         pygame.display.flip()
         
