@@ -19,6 +19,8 @@ YELLOW = (255,255,0)
 WHITE = (255,255,255)
 BLACK = (0,0,0)
 
+enemiesDead = 0
+
 class Shape:
     def __init__(self, pos, vel, angle, angvel, color, mass, moment, points):
         self.pos = Vec2d(pos)
@@ -196,10 +198,16 @@ def collide(shape1, shape2):
     else:
         separationVector = axis * minimumOverlap
     return (True, separationVector, returnPoint)
+    
+def remove_shapes(shapesToRemove, shapes, world):
+    for i in range(len(shapesToRemove)):
+        world.remove(shapesToRemove[i])
+        shapes.remove(shapesToRemove[i])
         
 def handle_collisions(shapes, world):
     e = 0.8
     walls = [Wall(Vec2d(0, -1), Vec2d(0, world.height), 0.5)]
+    shapesToRemove = []
     for i in range(len(shapes)):
         p = shapes[i]
         p.update_points()
@@ -208,6 +216,10 @@ def handle_collisions(shapes, world):
         for q in shapes:
             if p != q:
                 #pointNull = Vec2d(0,0)
+                if (p.points[0].x > 1700 or p.points[0].x < -200) and (p.color == RED or p.color == BLUE or p.color == GREEN) and pShapeRemoved == False:
+                    pShapeRemoved = True
+                    p.color = YELLOW
+                    shapesToRemove.append(p)
                 (colliding, sepVec, point) = collide(p, q)
                 if colliding:
                     mu = 1 / (p.massinv + q.massinv)
@@ -226,7 +238,9 @@ def handle_collisions(shapes, world):
                     if p.color == GREEN and pShapeRemoved == False and impulse.length > 5000:
                         pShapeRemoved = True
                         p.color = RED
-                        world.remove(p)
+                        shapesToRemove.append(p)
+                        global enemiesDead
+                        enemiesDead += 1
                     p.pos += sepVec * p.massinv * mu
                     q.pos -= sepVec * q.massinv * mu
                     p.add_impulse(J, point)
@@ -252,7 +266,9 @@ def handle_collisions(shapes, world):
                 if p.color == GREEN and pShapeRemoved == False and impulse.length > 5000:
                     pShapeRemoved = True
                     p.color = RED
-                    world.remove(p)
+                    shapesToRemove.append(p)
+                    global enemiesDead
+                    enemiesDead += 1
                 p.pos += wall.normal * max_d
                 p.add_impulse(J, point)
                 p.update_points()
@@ -263,7 +279,7 @@ def handle_collisions(shapes, world):
         p.update_points()
         p.update_axes()
         
-                
+    remove_shapes(shapesToRemove,shapes, world)
             
     # update any shapes that have been moved
     return False
@@ -300,23 +316,7 @@ def random_color(minimum, maximum):
             break
     return color
     
-def main():
-    pygame.init()
-    world = World(1500, 800, WHITE)
-    lineScreen = pygame.Surface((3, 800))
-    lineScreen.fill(BLUE)
-    world.screen.blit(lineScreen,(300, 0))
-    
-    world.display()
-    
-    moving = []
-
-    clock = pygame.time.Clock()
-    done = False
-    #density = 1 # mass / area
-    #timesteps = 0
-    inRange = False;
-
+def create_level1(moving, world):
     shape = Rectangle((975,700), (0,0), 0, 0, BLUE, 1, 50, 200)
     world.add(shape)
     shape.add_impulse(Vec2d(0,0), Vec2d(0,0))
@@ -362,8 +362,31 @@ def main():
     #enemy3.add_impulse(Vec2d(0,0), Vec2d(0,0))
     #moving.append(enemy3)
     
+def main():
+    pygame.init()
+    world = World(1500, 800, WHITE)
+    global enemiesDead
+    enemiesDead = 0
+    lineScreen = pygame.Surface((3, 800))
+    lineScreen.fill(BLUE)
+    world.screen.blit(lineScreen,(300, 0))
+    font = pygame.font.Font(None, 50)
+    win_text = font.render("You Win!", 1, (0, 0, 0))
+    
+    world.display()
+    
+    moving = []
+
+    clock = pygame.time.Clock()
+    done = False
+    #density = 1 # mass / area
+    #timesteps = 0
+    inRange = False;
+
+    create_level1(moving, world)
+    
     while not done:
-        print(shape.pos, shape.vel, shape.angle, shape.angvel)
+        #print(shape.pos, shape.vel, shape.angle, shape.angvel)
         # Check for events
         for event in pygame.event.get():
             if event.type == pygame.QUIT: # Close window clicked
@@ -388,6 +411,13 @@ def main():
                                 launchVec = launchVec.normalized() * 300
                             shape.vel = launchVec * 0.05
                             moving.append(shape)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    world = World(1500, 800, WHITE)
+                    moving = []
+                    global enemiesDead
+                    enemiesDead = 0
+                    create_level1(moving, world)
 
         # Velocity Verlet method
         n = 1
@@ -405,6 +435,8 @@ def main():
         #print(shape.pos, shape.angle)
         world.display()
         world.screen.blit(lineScreen,(300, 0))
+        if enemiesDead == 2:
+            world.screen.blit(win_text,(685,375))
         pygame.display.flip()
         
         clock.tick(60) # wait so that this only updates 60 fps maximum
