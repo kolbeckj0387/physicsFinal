@@ -41,6 +41,7 @@ class Shape:
         self.moment = moment
         self.momentinv = 1.0/moment
         self.visible = True
+        self.sleeping = False
         self.update_points()
         self.update_axes()    
         
@@ -119,14 +120,17 @@ class World:
 def update_pos(shapes, dt):
     """ (1) add angle update """
     for p in shapes:
-        p.pos   += p.vel*dt
-        p.angle += p.angvel*dt
+        if not p.sleeping:
+            p.pos   += p.vel*dt
+            p.angle += p.angvel*dt
+            p.sleeping = False
 
 def update_vel(shapes, dt):
     """ (2) add angvel update """
     for p in shapes:
-        p.vel    += p.force*p.massinv*dt
-        p.angvel += (p.torque/p.moment)*dt
+        if not p.sleeping:
+            p.vel    += p.force*p.massinv*dt
+            p.angvel += (p.torque/p.moment)*dt
         
 def update_force(shapes, world):
     for p in shapes:
@@ -208,6 +212,8 @@ def handle_collisions(shapes, world):
     e = 0.8
     walls = [Wall(Vec2d(0, -1), Vec2d(0, world.height), 0.5)]
     shapesToRemove = []
+    sleep_vel = 0.005
+    sleep_angvel = 0.001
     for i in range(len(shapes)):
         p = shapes[i]
         p.update_points()
@@ -247,6 +253,11 @@ def handle_collisions(shapes, world):
                     q.add_impulse(-J, point)
                     p.update_points
                     q.update_points
+                if p.vel.length < sleep_vel and abs(p.angvel) < sleep_angvel:
+                    p.sleeping = True
+                if q.vel.length < sleep_vel and abs(q.angvel) < sleep_angvel:
+                    q.sleeping = True
+                    
         for wall in walls:
             max_d = -1e15
             point = Vec2d(0,0)
@@ -262,6 +273,7 @@ def handle_collisions(shapes, world):
                     I = p.moment
                     J = (-(1 + wall.e) * (v.dot(n) + (w * (rxn))) * n) / (p.massinv + (rxn * rxn) / I)
             if max_d > 0:
+                p.sleeping = False
                 impulse = Vec2d(J)
                 if p.color == GREEN and pShapeRemoved == False and impulse.length > 5000:
                     pShapeRemoved = True
@@ -272,12 +284,15 @@ def handle_collisions(shapes, world):
                 p.pos += wall.normal * max_d
                 p.add_impulse(J, point)
                 p.update_points()
+            if p.vel.length < sleep_vel and abs(p.angvel) < sleep_angvel:
+                p.sleeping = True
                 
     """ (8) Collision detection """
     """ (9) Collision resolution """
     for p in shapes:
         p.update_points()
         p.update_axes()
+        p.sleeping = False
         
     remove_shapes(shapesToRemove,shapes, world)
             
